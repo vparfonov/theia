@@ -28,7 +28,11 @@ import {
     PluginPackageLanguageContributionConfiguration,
     LanguageConfiguration,
     AutoClosingPairConditional,
-    AutoClosingPair
+    AutoClosingPair,
+    ViewContainer,
+    PluginPackageViewContainer,
+    View,
+    PluginPackageView
 } from '../../../common/plugin-protocol';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -93,15 +97,68 @@ export class TheiaPluginScanner implements PluginScanner {
             contributions.grammars = grammars;
         }
 
+        if (rawPlugin.contributes!.viewsContainers) {
+            contributions.viewsContainers = {};
+
+            for (let location in rawPlugin.contributes.viewsContainers!) {
+                if (rawPlugin.contributes.viewsContainers!.hasOwnProperty(location)) {
+                    const containers = this.readViewsContainers(rawPlugin.contributes.viewsContainers![location], rawPlugin.packagePath);
+                    if (location === 'activitybar') {
+                        location = 'left';
+                    }
+
+                    if (contributions.viewsContainers[location]) {
+                        contributions.viewsContainers[location] = contributions.viewsContainers[location].concat(containers);
+                    } else {
+                        contributions.viewsContainers[location] = containers;
+                    }
+                }
+            }
+        }
+
+        if (rawPlugin.contributes!.views) {
+            contributions.views = {};
+
+            for (const location in rawPlugin.contributes.views!) {
+                if (rawPlugin.contributes.views!.hasOwnProperty(location)) {
+                    const views = this.readViews(rawPlugin.contributes.views![location]);
+                    contributions.views[location] = views;
+                }
+            }
+        }
+
         return contributions;
     }
 
-    private readLanguages(rawLanguages: PluginPackageLanguageContribution[], pluginPath: string): LanguageContribution[] {
-        const result = new Array<LanguageContribution>();
-        for (const lang of rawLanguages) {
-            result.push(this.readLanguage(lang, pluginPath));
-        }
+    private readViewsContainers(rawViewsContainers: PluginPackageViewContainer[], pluginPath: string): ViewContainer[] {
+        return rawViewsContainers.map(rawViewContainer => this.readViewContainer(rawViewContainer, pluginPath));
+    }
+
+    private readViewContainer(rawViewContainer: PluginPackageViewContainer, pluginPath: string): ViewContainer {
+        const result: ViewContainer = {
+            id: rawViewContainer.id,
+            title: rawViewContainer.title,
+            icon: rawViewContainer.icon
+        };
+
         return result;
+    }
+
+    private readViews(rawViews: PluginPackageView[]): View[] {
+        return rawViews.map(rawView => this.readView(rawView));
+    }
+
+    private readView(rawView: PluginPackageView): View {
+        const result: View = {
+            id: rawView.id,
+            name: rawView.name
+        };
+
+        return result;
+    }
+
+    private readLanguages(rawLanguages: PluginPackageLanguageContribution[], pluginPath: string): LanguageContribution[] {
+        return rawLanguages.map(language => this.readLanguage(language, pluginPath));
     }
 
     private readLanguage(rawLang: PluginPackageLanguageContribution, pluginPath: string): LanguageContribution {
@@ -232,6 +289,7 @@ function isCharacterPair(something: CharacterPair): boolean {
         && something.length === 2
     );
 }
+
 function isStringArr(something: string[]): boolean {
     if (!Array.isArray(something)) {
         return false;
