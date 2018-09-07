@@ -39,6 +39,7 @@ export const cppPreferencesSchema: PreferenceSchema = {
         },
         'cpp.experimentalCommands': {
             description: 'Enable experimental commands mostly intended for Clangd developers.',
+            default: false,
             type: 'boolean'
         }
     }
