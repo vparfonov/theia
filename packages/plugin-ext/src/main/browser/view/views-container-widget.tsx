@@ -60,7 +60,6 @@ export class ViewsContainerWidget extends ReactWidget {
         this.id = `views-container-widget-${viewContainer.id}`;
         this.title.closable = true;
         this.title.caption = this.title.label = viewContainer.title;
-        this.title.iconClass = 'fa fa-child';
 
         this.addClass('theia-views-container');
 
