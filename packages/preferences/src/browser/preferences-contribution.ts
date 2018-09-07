@@ -33,9 +33,6 @@ export const PREFERENCES_COMMAND: Command = {
     label: 'Open Preferences'
 };
 
-export const PREFERENCES_CONTAINER_WIDGET_ID = 'preferences_container_widget';
-export const PREFERENCES_TREE_WIDGET_ID = 'preferences_tree_widget';
-
 @injectable()
 export class PreferencesContribution extends AbstractViewContribution<PreferencesContainer> {
 
@@ -46,7 +43,7 @@ export class PreferencesContribution extends AbstractViewContribution<Preference
 
     constructor() {
         super({
-            widgetId: PREFERENCES_CONTAINER_WIDGET_ID,
+            widgetId: PreferencesContainer.ID,
             widgetName: 'Preferences',
             defaultWidgetOptions: { area: 'main' }
         });
@@ -60,9 +57,9 @@ export class PreferencesContribution extends AbstractViewContribution<Preference
     }
 
     registerMenus(menus: MenuModelRegistry): void {
-        menus.registerMenuAction(CommonMenus.FILE_OPEN, {
+        menus.registerMenuAction(CommonMenus.FILE_SETTINGS_SUBMENU_OPEN, {
             commandId: PREFERENCES_COMMAND.id,
-            order: 'a30'
+            order: 'a10'
         });
     }
 
@@ -70,7 +67,7 @@ export class PreferencesContribution extends AbstractViewContribution<Preference
         const userUri = this.userPreferenceProvider.getUri();
         const content = await this.userStorageService.readContents(userUri);
         if (content === '') {
-            await this.userStorageService.saveContents(userUri, this.getPreferenceTemplateForScope('user'));
+            await this.userStorageService.saveContents(userUri, '');
         }
 
         const wsUri = await this.workspacePreferenceProvider.getUri();
@@ -78,17 +75,10 @@ export class PreferencesContribution extends AbstractViewContribution<Preference
             return;
         }
         if (!(await this.filesystem.exists(wsUri.toString()))) {
-            await this.filesystem.createFile(wsUri.toString(), { content: this.getPreferenceTemplateForScope('workspace') });
+            await this.filesystem.createFile(wsUri.toString());
         }
 
         super.openView({ activate: true });
     }
 
-    private getPreferenceTemplateForScope(scope: string): string {
-        return `/*
-Preference file for ${scope} scope
-
-Please refer to the documentation online (https://github.com/theia-ide/theia/blob/master/packages/preferences/README.md) to learn how preferences work in Theia
-*/`;
-    }
 }

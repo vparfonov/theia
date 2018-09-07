@@ -23,6 +23,7 @@ import {
     PreferenceSchema,
     PreferenceChangeEvent
 } from '@theia/core/lib/browser/preferences';
+import { isOSX } from '@theia/core/lib/common/os';
 
 export const editorPreferenceSchema: PreferenceSchema = {
     'type': 'object',
@@ -32,6 +33,11 @@ export const editorPreferenceSchema: PreferenceSchema = {
             'minimum': 1,
             'default': 4,
             'description': 'Configure the tab size in the editor'
+        },
+        'editor.fontSize': {
+            'type': 'number',
+            'default': (isOSX) ? 12 : 14,
+            'description': 'Configure the editor font size'
         },
         'editor.lineNumbers': {
             'enum': [
@@ -334,6 +340,7 @@ export const editorPreferenceSchema: PreferenceSchema = {
 
 export interface EditorConfiguration {
     'editor.tabSize': number
+    'editor.fontSize': number
     'editor.autoSave': 'on' | 'off'
     'editor.autoSaveDelay': number
     'editor.lineNumbers'?: 'on' | 'off'

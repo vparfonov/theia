@@ -33,7 +33,10 @@ import { FrontendApplication, FrontendApplicationContribution, DefaultFrontendAp
 import { DefaultOpenerService, OpenerService, OpenHandler } from './opener-service';
 import { HttpOpenHandler } from './http-open-handler';
 import { CommonFrontendContribution } from './common-frontend-contribution';
-import { QuickOpenService, QuickCommandService, QuickCommandFrontendContribution, QuickPickService } from './quick-open';
+import {
+    QuickOpenService, QuickCommandService, QuickCommandFrontendContribution, QuickPickService, QuickOpenContribution,
+    QuickOpenHandlerRegistry, CommandQuickOpenContribution, HelpQuickOpenHandler, QuickOpenFrontendContribution, PrefixQuickOpenService
+} from './quick-open';
 import { LocalStorageService, StorageService } from './storage-service';
 import { WidgetFactory, WidgetManager } from './widget-manager';
 import {
@@ -44,8 +47,8 @@ import { StatusBar, StatusBarImpl } from './status-bar/status-bar';
 import { LabelParser } from './label-parser';
 import { LabelProvider, LabelProviderContribution, DefaultUriLabelProviderContribution } from './label-provider';
 import {
-    PreferenceProviders, PreferenceProvider, PreferenceScope, PreferenceService,
-    PreferenceServiceImpl, PreferenceSchemaProvider, PreferenceContribution
+    PreferenceProviderProvider, PreferenceProvider, PreferenceScope, PreferenceService,
+    PreferenceServiceImpl, bindPreferenceSchemaProvider
 } from './preferences';
 import { ContextMenuRenderer } from './context-menu-renderer';
 import { ThemingCommandContribution, ThemeService, BuiltinThemeProvider } from './theming';
@@ -101,6 +104,7 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     bind(CommandRegistry).toSelf().inSingletonScope();
     bind(CommandService).toDynamicValue(context => context.container.get(CommandRegistry));
     bindContributionProvider(bind, CommandContribution);
+    bind(QuickOpenContribution).to(CommandQuickOpenContribution);
 
     bind(MenuModelRegistry).toSelf().inSingletonScope();
     bindContributionProvider(bind, MenuContribution);
@@ -125,6 +129,15 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
         bind(serviceIdentifier).toDynamicValue(ctx => ctx.container.get(QuickCommandFrontendContribution)).inSingletonScope()
     );
 
+    bind(PrefixQuickOpenService).toSelf().inSingletonScope();
+    bindContributionProvider(bind, QuickOpenContribution);
+    bind(QuickOpenHandlerRegistry).toSelf().inSingletonScope();
+    bind(QuickOpenFrontendContribution).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toService(QuickOpenFrontendContribution);
+
+    bind(HelpQuickOpenHandler).toSelf().inSingletonScope();
+    bind(QuickOpenContribution).toService(HelpQuickOpenHandler);
+
     bind(LocalStorageService).toSelf().inSingletonScope();
     bind(StorageService).toService(LocalStorageService);
 
@@ -139,13 +152,11 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
 
     bind(PreferenceProvider).toSelf().inSingletonScope().whenTargetNamed(PreferenceScope.User);
     bind(PreferenceProvider).toSelf().inSingletonScope().whenTargetNamed(PreferenceScope.Workspace);
-    bind(PreferenceProviders).toFactory(ctx => (scope: PreferenceScope) => ctx.container.getNamed(PreferenceProvider, scope));
+    bind(PreferenceProviderProvider).toFactory(ctx => (scope: PreferenceScope) => ctx.container.getNamed(PreferenceProvider, scope));
     bind(PreferenceServiceImpl).toSelf().inSingletonScope();
-    for (const serviceIdentifier of [PreferenceService, FrontendApplicationContribution]) {
-        bind(serviceIdentifier).toDynamicValue(ctx => ctx.container.get(PreferenceServiceImpl)).inSingletonScope();
-    }
-    bind(PreferenceSchemaProvider).toSelf().inSingletonScope();
-    bindContributionProvider(bind, PreferenceContribution);
+    bind(PreferenceService).toService(PreferenceServiceImpl);
+    bind(FrontendApplicationContribution).toService(PreferenceServiceImpl);
+    bindPreferenceSchemaProvider(bind);
 
     bind(PingService).toDynamicValue(ctx => {
         // let's reuse a simple and cheap service from this package
@@ -176,5 +187,9 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     }).inSingletonScope();
 
     bind(ThemeService).toDynamicValue(() => ThemeService.get());
-    bind(CommandContribution).to(ThemingCommandContribution).inSingletonScope();
+
+    bind(ThemingCommandContribution).toSelf().inSingletonScope();
+    [CommandContribution, MenuContribution].forEach(serviceIdentifier =>
+        bind(serviceIdentifier).toService(ThemingCommandContribution),
+    );
 });

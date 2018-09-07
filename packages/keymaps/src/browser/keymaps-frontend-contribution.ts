@@ -22,11 +22,8 @@ import {
     MenuContribution,
     MenuModelRegistry
 } from '@theia/core/lib/common';
-import { open, OpenerService } from '@theia/core/lib/browser';
-import { FrontendApplication } from '@theia/core/lib/browser';
 import { CommonMenus } from '@theia/core/lib/browser/common-frontend-contribution';
-import { WidgetManager } from '@theia/core/lib/browser/widget-manager';
-import { keymapsUri } from './keymaps-service';
+import { KeymapsService } from './keymaps-service';
 export namespace KeymapsCommands {
     export const OPEN_KEYMAPS: Command = {
         id: 'keymaps:open',
@@ -37,27 +34,21 @@ export namespace KeymapsCommands {
 @injectable()
 export class KeymapsFrontendContribution implements CommandContribution, MenuContribution {
 
-    constructor(
-        @inject(FrontendApplication) protected readonly app: FrontendApplication,
-        @inject(WidgetManager) protected readonly widgetManager: WidgetManager,
-        @inject(OpenerService) protected readonly openerService: OpenerService,
-    ) { }
+    @inject(KeymapsService)
+    protected readonly keymaps: KeymapsService;
 
     registerCommands(commands: CommandRegistry): void {
         commands.registerCommand(KeymapsCommands.OPEN_KEYMAPS, {
             isEnabled: () => true,
-            execute: () => this.openKeymapsFile()
+            execute: () => this.keymaps.open()
         });
     }
 
     registerMenus(menus: MenuModelRegistry): void {
-        menus.registerMenuAction(CommonMenus.FILE_OPEN, {
+        menus.registerMenuAction(CommonMenus.FILE_SETTINGS_SUBMENU_OPEN, {
             commandId: KeymapsCommands.OPEN_KEYMAPS.id,
-            order: 'a40'
+            order: 'a20'
         });
     }
 
-    protected openKeymapsFile(): void {
-        open(this.openerService, keymapsUri);
-    }
 }

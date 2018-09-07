@@ -15,19 +15,17 @@
  ********************************************************************************/
 
 import { ContainerModule, } from 'inversify';
-import { FrontendApplicationContribution } from '@theia/core/lib/browser';
 import { KeymapsService } from './keymaps-service';
 import { KeymapsFrontendContribution } from './keymaps-frontend-contribution';
 import { CommandContribution, MenuContribution } from '@theia/core/lib/common';
+import { KeymapsParser } from './keymaps-parser';
+
+import './monaco-contribution';
 
 export default new ContainerModule(bind => {
-
+    bind(KeymapsParser).toSelf().inSingletonScope();
+    bind(KeymapsService).toSelf().inSingletonScope();
     bind(KeymapsFrontendContribution).toSelf().inSingletonScope();
-    for (const identifier of [CommandContribution, MenuContribution]) {
-        bind(identifier).toDynamicValue(ctx =>
-            ctx.container.get(KeymapsFrontendContribution)
-        ).inSingletonScope();
-    }
-
-    bind(FrontendApplicationContribution).to(KeymapsService).inSingletonScope();
+    bind(CommandContribution).toService(KeymapsFrontendContribution);
+    bind(MenuContribution).toService(KeymapsFrontendContribution);
 });

@@ -70,7 +70,7 @@ export class PluginContributionHandler {
                     }
                 }
 
-                this.grammarsRegistry.registerTextMateGrammarScope(grammar.scope, {
+                this.grammarsRegistry.registerTextmateGrammarScope(grammar.scope, {
                     async getGrammarDefinition() {
                         return {
                             format: grammar.format,

@@ -72,8 +72,8 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
 
     private cancelIndicator = new CancellationTokenSource();
 
-    protected changeEmitter: Emitter<Map<string, SearchInWorkspaceResultNode>>;
-    protected focusInputEmitter: Emitter<any>;
+    protected changeEmitter = new Emitter<Map<string, SearchInWorkspaceResultNode>>();
+    protected focusInputEmitter = new Emitter<any>();
 
     @inject(SearchInWorkspaceService) protected readonly searchService: SearchInWorkspaceService;
     @inject(EditorManager) protected readonly editorManager: EditorManager;
@@ -105,6 +105,7 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
             }
         }));
 
+        this.resultTree = new Map<string, SearchInWorkspaceResultNode>();
         this.toDispose.push(model.onNodeRefreshed(() => this.changeEmitter.fire(this.resultTree)));
     }
 
@@ -121,8 +122,8 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
             }
         });
 
-        this.changeEmitter = new Emitter();
-        this.focusInputEmitter = new Emitter();
+        this.toDispose.push(this.changeEmitter);
+        this.toDispose.push(this.focusInputEmitter);
 
         this.toDispose.push(this.editorManager.onActiveEditorChanged(() => {
             this.updateCurrentEditorDecorations();
@@ -153,6 +154,7 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
 
     async search(searchTerm: string, searchOptions: SearchInWorkspaceOptions): Promise<void> {
         this.searchTerm = searchTerm;
+        this.resultTree.clear();
         this.resultTree = new Map<string, SearchInWorkspaceResultNode>();
         this.cancelIndicator.cancel();
         this.cancelIndicator = new CancellationTokenSource();
@@ -167,7 +169,8 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
                     return;
                 }
                 const { name, path } = this.filenameAndPath(result.file);
-                let resultElement = this.resultTree.get(result.file);
+                const tree = this.resultTree;
+                let resultElement = tree.get(result.file);
 
                 if (resultElement) {
                     const resultLine = this.createResultLineNode(result, resultElement);
@@ -191,7 +194,7 @@ export class SearchInWorkspaceResultTreeWidget extends TreeWidget {
                             file: result.file
                         };
                         resultElement.children.push(this.createResultLineNode(result, resultElement));
-                        this.resultTree.set(result.file, resultElement);
+                        tree.set(result.file, resultElement);
                     }
                 }
             },

@@ -219,7 +219,7 @@ export class MarkdownPreviewHandler implements PreviewHandler {
                     return '<pre class="hljs"><code><div>' + engine.utils.escapeHtml(str) + '</div></code></pre>';
                 }
             });
-            const renderers = ['heading_open', 'paragraph_open', 'list_item_open', 'blockquote_open', 'code_block', 'image'];
+            const renderers = ['heading_open', 'paragraph_open', 'list_item_open', 'blockquote_open', 'code_block', 'image', 'fence'];
             for (const renderer of renderers) {
                 const originalRenderer = engine.renderer.rules[renderer];
                 engine.renderer.rules[renderer] = (tokens, index, options, env, self) => {
@@ -249,6 +249,44 @@ export class MarkdownPreviewHandler implements PreviewHandler {
                 }
                 return originalImageRenderer(tokens, index, options, env, self);
             };
+
+            const domParser = new DOMParser();
+
+            const parseDOM = (html: string) =>
+                domParser.parseFromString(html, 'text/html').getElementsByTagName('body')[0] as HTMLElement;
+
+            const modifyDOM = (body: HTMLElement, tag: string, procedure: (element: Element) => void) => {
+                const elements = body.getElementsByTagName(tag);
+                for (let i = 0; i < elements.length; i++) {
+                    const element = elements.item(i);
+                    procedure(element);
+                }
+            };
+
+            const normalizeAllImgSrcInHTML = (html: string, normalizeLink: (link: string) => string) => {
+                const body = parseDOM(html);
+                modifyDOM(body, 'img', img => {
+                    const src = img.getAttributeNode('src');
+                    if (src) {
+                        src.nodeValue = normalizeLink(src.nodeValue || '');
+                    }
+                });
+                return body.innerHTML;
+            };
+
+            for (const name of ['html_block', 'html_inline']) {
+                const originalRenderer = engine.renderer.rules[name];
+                engine.renderer.rules[name] = (tokens, index, options, env, self) => {
+                    const currentToken = tokens[index];
+                    const content = currentToken.content;
+                    if (content.includes('<img') && RenderContentParams.is(env)) {
+                        const documentUri = env.originUri;
+                        currentToken.content = normalizeAllImgSrcInHTML(content, link => this.linkNormalizer.normalizeLink(documentUri, link));
+                    }
+                    return originalRenderer(tokens, index, options, env, self);
+                };
+            }
+
             anchor(engine, {});
         }
         return this.engine;

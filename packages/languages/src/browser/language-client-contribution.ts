@@ -16,13 +16,14 @@
 
 import { injectable, inject } from 'inversify';
 import { MessageService, CommandRegistry } from '@theia/core';
-import { Disposable } from '@theia/core/lib/common';
-import { FrontendApplication } from '@theia/core/lib/browser';
+import { Disposable, DisposableCollection } from '@theia/core/lib/common';
+import { FrontendApplication, WebSocketConnectionProvider, WebSocketOptions } from '@theia/core/lib/browser';
 import {
     LanguageContribution, ILanguageClient, LanguageClientOptions,
     DocumentSelector, TextDocument, FileSystemWatcher,
-    Workspace, Languages
+    Workspace, Languages, State
 } from './language-client-services';
+import { MessageConnection } from 'vscode-jsonrpc';
 import { LanguageClientFactory } from './language-client-factory';
 import { WorkspaceService } from '@theia/workspace/lib/browser';
 
@@ -47,6 +48,7 @@ export abstract class BaseLanguageClientContribution implements LanguageClientCo
     @inject(MessageService) protected readonly messageService: MessageService;
     @inject(CommandRegistry) protected readonly registry: CommandRegistry;
     @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService;
+    @inject(WebSocketConnectionProvider) protected readonly connectionProvider: WebSocketConnectionProvider;
 
     constructor(
         @inject(Workspace) protected readonly workspace: Workspace,
@@ -87,12 +89,42 @@ export abstract class BaseLanguageClientContribution implements LanguageClientCo
     }
 
     activate(): Disposable {
-        const languageClient = this.createLanguageClient();
-        this.onWillStart(languageClient);
-        return languageClient.start();
+        const options: WebSocketOptions = {};
+        const toDeactivate = new DisposableCollection();
+        toDeactivate.push(Disposable.create(() => {
+            options.reconnecting = false;
+        }));
+        this.connectionProvider.listen({
+            path: LanguageContribution.getPath(this),
+            onConnection: messageConnection => {
+                if (toDeactivate.disposed) {
+                    messageConnection.dispose();
+                    return;
+                }
+                toDeactivate.push(messageConnection);
+
+                const languageClient = this.createLanguageClient(messageConnection);
+                this.onWillStart(languageClient);
+                languageClient.start();
+            }
+        }, options);
+        return toDeactivate;
+    }
+
+    protected state: State | undefined;
+    get running(): boolean {
+        return this.state === State.Running;
+    }
+    restart(): void {
+        if (this._languageClient) {
+            this._languageClient.stop();
+        }
     }
 
     protected onWillStart(languageClient: ILanguageClient): void {
+        languageClient.onDidChangeState(({ newState }) => {
+            this.state = newState;
+        });
         languageClient.onReady().then(() => this.onReady(languageClient));
     }
 
@@ -108,23 +140,33 @@ export abstract class BaseLanguageClientContribution implements LanguageClientCo
         );
     }
 
-    protected createLanguageClient(): ILanguageClient {
+    protected createLanguageClient(connection: MessageConnection): ILanguageClient {
         const clientOptions = this.createOptions();
-        return this.languageClientFactory.get(this, clientOptions);
+        return this.languageClientFactory.get(this, clientOptions, connection);
     }
 
     protected createOptions(): LanguageClientOptions {
-        const fileEvents = this.createFileEvents();
+        const { id, documentSelector, fileEvents, configurationSection, initializationOptions } = this;
         return {
-            documentSelector: this.documentSelector,
-            synchronize: { fileEvents },
+            documentSelector,
+            synchronize: { fileEvents, configurationSection },
             initializationFailedHandler: err => {
                 const detail = err instanceof Error ? `: ${err.message}` : '.';
                 this.messageService.error(`Failed to start ${this.name} language server${detail}`);
                 return false;
             },
-            diagnosticCollectionName: this.id,
+            diagnosticCollectionName: id,
+            initializationOptions
         };
+    }
+
+    // tslint:disable-next-line:no-any
+    protected get initializationOptions(): any | (() => any) | undefined {
+        return undefined;
+    }
+
+    protected get configurationSection(): string | string[] | undefined {
+        return undefined;
     }
 
     protected get workspaceContains(): string[] {
@@ -135,6 +177,10 @@ export abstract class BaseLanguageClientContribution implements LanguageClientCo
         return [this.id];
     }
 
+    protected _fileEvents: FileSystemWatcher[] | undefined;
+    protected get fileEvents(): FileSystemWatcher[] {
+        return this._fileEvents = this._fileEvents || this.createFileEvents();
+    }
     protected createFileEvents(): FileSystemWatcher[] {
         const watchers = [];
         if (this.workspace.createFileSystemWatcher) {
