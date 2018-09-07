@@ -139,7 +139,6 @@ export class TreeWidget extends ReactWidget implements StatefulWidget {
                     await this.treeSearch.filter(data);
                     this.treeSearch.decorations();
                     this.searchHighlights = this.treeSearch.decorations();
-                    this.model.filteredNodes = this.treeSearch.filteredNodes;
                     this.update();
                 }),
                 this.searchBox.onClose(data => this.treeSearch.filter(undefined)),

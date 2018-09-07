@@ -17,10 +17,10 @@
 import { inject, injectable, postConstruct } from 'inversify';
 import { Disposable, DisposableCollection } from '../../common/disposable';
 import { Event, Emitter } from '../../common/event';
-import { Tree, TreeNode} from '../tree/tree';
-import { TreeDecoration } from '../tree/tree-decorator';
-import { TopDownTreeIterator } from '../';
+import { Tree, TreeNode } from './tree';
+import { TreeDecoration } from './tree-decorator';
 import { FuzzySearch } from './fuzzy-search';
+import { TopDownTreeIterator } from './tree-iterator';
 
 @injectable()
 export class TreeSearch implements Disposable {

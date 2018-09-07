@@ -23,10 +23,10 @@ import { TreeSelectionServiceImpl } from './tree-selection-impl';
 import { TreeExpansionService, TreeExpansionServiceImpl } from './tree-expansion';
 import { TreeNavigationService } from './tree-navigation';
 import { TreeDecoratorService, NoopTreeDecoratorService } from './tree-decorator';
-import { TreeSearch } from '../';
-import { FuzzySearch } from '../tree/fuzzy-search';
-import { SearchBox, SearchBoxFactory, SearchBoxProps } from '../tree/search-box';
-import { SearchBoxDebounce } from '../tree/search-box-debounce';
+import { TreeSearch } from './tree-search';
+import { FuzzySearch } from './fuzzy-search';
+import { SearchBox, SearchBoxFactory, SearchBoxProps } from './search-box';
+import { SearchBoxDebounce } from './search-box-debounce';
 
 export function createTreeContainer(parent: interfaces.Container): Container {
     const child = new Container({ defaultScope: 'Singleton' });
