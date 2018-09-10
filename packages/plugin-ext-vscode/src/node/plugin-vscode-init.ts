@@ -30,13 +30,13 @@ export const doInitialization: BackendInitializationFn = (apiFactory: PluginAPIF
     const contributes: any = plugin.rawModel.contributes;
     if (contributes && contributes.commands) {
         contributes.commands.forEach((commandItem: any) => {
-            if (typeof commandItem.category !== 'undefined' && commandItem.category) {
+            if (commandItem.category) { // if VS Code command has category we will add it before title, so labbel will looks like 'category: title'
                 vscode.commands.registerCommand({ id: commandItem.command,
-                    label: commandItem.title });
+                    label: commandItem.category + ': ' + commandItem.title });
             } else {
                 vscode.commands.registerCommand({
                     id: commandItem.command,
-                    label: commandItem.category + ': ' + commandItem.title });
+                    label: commandItem.title });
             }
         });
     }
