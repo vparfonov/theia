@@ -30,7 +30,14 @@ export const doInitialization: BackendInitializationFn = (apiFactory: PluginAPIF
     const contributes: any = plugin.rawModel.contributes;
     if (contributes && contributes.commands) {
         contributes.commands.forEach((commandItem: any) => {
-            vscode.commands.registerCommand({ id: commandItem.command, label: commandItem.title });
+            if (typeof commandItem.category !== 'undefined' && commandItem.category) {
+                vscode.commands.registerCommand({ id: commandItem.command,
+                    label: commandItem.title });
+            } else {
+                vscode.commands.registerCommand({
+                    id: commandItem.command,
+                    label: commandItem.category + ': ' + commandItem.title });
+            }
         });
     }
 
