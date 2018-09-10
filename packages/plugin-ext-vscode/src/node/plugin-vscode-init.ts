@@ -30,14 +30,13 @@ export const doInitialization: BackendInitializationFn = (apiFactory: PluginAPIF
     const contributes: any = plugin.rawModel.contributes;
     if (contributes && contributes.commands) {
         contributes.commands.forEach((commandItem: any) => {
-            if (commandItem.category) { // if VS Code command has category we will add it before title, so labbel will looks like 'category: title'
-                vscode.commands.registerCommand({ id: commandItem.command,
-                    label: commandItem.category + ': ' + commandItem.title });
+            let commandLabel: any;
+            if (commandItem.category) { // if VS Code command has category we will add it before title, so label will looks like 'category: title'
+                commandLabel = commandItem.category + ': ' + commandItem.title;
             } else {
-                vscode.commands.registerCommand({
-                    id: commandItem.command,
-                    label: commandItem.title });
+                commandLabel = commandItem.title;
             }
+            vscode.commands.registerCommand({id: commandItem.command, label: commandLabel });
         });
     }
 
